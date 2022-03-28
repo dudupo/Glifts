@@ -1,9 +1,6 @@
-from turtle import color
 import matplotlib.pyplot as plt 
 import numpy as np 
 from itertools import product
-
-from rdflib import Graph
 
 
 class Graph():

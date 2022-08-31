@@ -14,8 +14,9 @@ class Graph():
                 self.connect(u,v)
 
     def connect(self, u,v):
-        self.edges[u].append((u,v))
-        self.matrix[u,v] = 1
+        if self.matrix[u,v] != 1:
+            self.edges[u].append((u,v))
+            self.matrix[u,v] = 1
 
     def unzip(self): 
 
@@ -35,7 +36,7 @@ class UNGraph(Graph):
     def connect(self, u, v):
         super().connect(u,v)
         super().connect(v,u)
-
+  
 class Group():
     def __init__(self, table) -> None:
         self.table = table
@@ -46,6 +47,68 @@ class Group():
     
     def mul(self, x,y):
         return self.table[x][y]
+
+from itertools import product 
+
+def allPGL_matrices(q):
+    colorize = set() 
+    #yield np.array([[1,0],[0,1]])
+    for (a,b,c,d) in product(range(q), repeat=4):
+        if (a,b,c,d) not in colorize:
+            matrix = np.array([[a,b],[c,d]])
+            if (a*d - b*c)%q != 0:  
+               # if not (c != 0 and b != 0 and a == d):
+                for j in range(1,q):
+                    colorize.add( (j*a%q,j*b%q,j*c%q,j*d%q )) 
+                print(matrix)
+                yield matrix 
+from pprint import pprint
+class LPS(Group):
+    def __init__(self, q):
+        self.q = q
+        self.PGL = list(_ for _ in allPGL_matrices(q))
+        m =  int(q*(q**2-1)) # /2 (PGL vs PSL)
+        self.PGL_dict = { str(_) : i for (i,_) in enumerate(self.PGL) }   
+        print(m, len(self.PGL))
+        table = [[-1 for _ in range(m)] for __ in range(m) ] 
+        for ((i,a),(j,b)) in product(enumerate(self.PGL), enumerate(self.PGL)):
+           # print(i,j,k)
+           r = a@b % q
+           for k in range(q):
+               if str(r*k%q) in self.PGL_dict:
+                   table[i][j] = self.PGL_dict[str(r*k%q)]
+                   break
+           
+        super().__init__( table )
+        
+        self.imag = 1
+        #find the squre root of -1:
+        for i in range(q):
+            if (i ** 2) % q == q-1:
+                self.imag = i 
+                break
+
+        print(self.imag)
+   
+        
+    def gen_set(self, p):
+        soultions, q = [], self.q
+        for (a,b,c,d) in product(range(q), repeat=4):
+            if (a % 2 == 1) and (b % 2 == 0) and (c % 2 == 0) and (d % 2 == 0):
+                l = np.array([a,b,c,d])
+                print(l)
+                if sum(l**2) % q == p:
+                    soultions.append(l)
+        ret = []
+        for sol in soultions:
+            alpha = np.array( [[sol[0], sol[2]], [-sol[2],sol[0]]]) + \
+                    self.imag * np.array([[sol[1] , sol[3]], [sol[3] , -sol[1]]])
+            alpha %= q
+            for i,g in enumerate(self.PGL):
+                if (g == alpha).all():
+                    ret += [i]
+        print("------")
+        return ret 
 
 def Glift(graph : Graph, group : Group, voltage ):
     
@@ -61,6 +124,27 @@ def Glift(graph : Graph, group : Group, voltage ):
           maptup(v , group.mul(voltage(u,v), g) ))
     
     return lifted 
+
+def cayly(group, gen_set, G = None):
+    if G is None:
+        G = UNGraph(group.elements)
+    for a in gen_set:
+        for g in range(group.elements):
+            G.connect(g,group.mul(g,a))
+    return G
+
+def balance_prod(group, fgen_set, sgen_set):
+    G, caylys = UNGraph(group.elemnts), []
+    for g in range(group.elemnts):
+        for a in range(fgen_set):
+            for b in range(sgen_set):
+                G.connect( g, group.mul(a, group.mul(g,b)))
+    return G 
+    #for gen_set in gen_sets:
+    #    G = cayly(group, gen_set, G)
+    #    caylys.append(G)
+    #square_complex =  
+    #return G 
 
 def plotLifted(lifted, Gsize):
     n = list(range(int(len(lifted.vertices) / Gsize )))
@@ -88,6 +172,19 @@ def plotLifted(lifted, Gsize):
 
 if __name__ == "__main__" :
     
+    G = LPS(13)
+    h = G.mul(2,3)
+    
+    print(h)
+    print(G.PGL[2])
+    print(G.PGL[3])
+    print(G.PGL[4])
+    #print("\n".join(G.PGL))
+    #genset = G.gen_set(5)
+    #for r in genset:
+    #    print(G.PGL[r])
+    exit(0)
+
     G = Group( np.array([ 
         [0, 1],
         [1, 0] ]))

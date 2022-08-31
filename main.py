@@ -60,7 +60,6 @@ def allPGL_matrices(q):
                # if not (c != 0 and b != 0 and a == d):
                 for j in range(1,q):
                     colorize.add( (j*a%q,j*b%q,j*c%q,j*d%q )) 
-                print(matrix)
                 yield matrix 
 from pprint import pprint
 class LPS(Group):
@@ -71,13 +70,13 @@ class LPS(Group):
         self.PGL_dict = { str(_) : i for (i,_) in enumerate(self.PGL) }   
         print(m, len(self.PGL))
         table = [[-1 for _ in range(m)] for __ in range(m) ] 
-        for ((i,a),(j,b)) in product(enumerate(self.PGL), enumerate(self.PGL)):
-           # print(i,j,k)
-           r = a@b % q
-           for k in range(q):
-               if str(r*k%q) in self.PGL_dict:
-                   table[i][j] = self.PGL_dict[str(r*k%q)]
-                   break
+        #for ((i,a),(j,b)) in product(enumerate(self.PGL), enumerate(self.PGL)):
+        #   # print(i,j,k)
+        #   r = a@b % q
+        #   for k in range(q):
+        #       if str(r*k%q) in self.PGL_dict:
+        #           table[i][j] = self.PGL_dict[str(r*k%q)]
+        #           break
            
         super().__init__( table )
         
@@ -90,23 +89,37 @@ class LPS(Group):
 
         print(self.imag)
    
-        
+    def mul(self,x ,y):
+        if self.table[x][y] != -1:
+            return self.table[x][y]
+        q = self.q
+        _x, _y = self.PGL[x], self.PGL[y]
+        r = _x@_y % q
+        for k in range(q):
+            if str(r*k%q) in self.PGL_dict:
+                self.table[x][y] = self.PGL_dict[str(r*k%q)]
+                break
+        return self.table[x][y]
+            
+         
     def gen_set(self, p):
         soultions, q = [], self.q
         for (a,b,c,d) in product(range(q), repeat=4):
-            if (a % 2 == 1) and (b % 2 == 0) and (c % 2 == 0) and (d % 2 == 0):
+            if (a == 1) and (b % 2 == 0) and (c % 2 == 0) and (d % 2 == 0) and (b<=c) and (c<=d):
                 l = np.array([a,b,c,d])
-                print(l)
-                if sum(l**2) % q == p:
+                if sum(l**2) % q  == p:
                     soultions.append(l)
         ret = []
+        print(len(soultions))
+        print("------")
         for sol in soultions:
             alpha = np.array( [[sol[0], sol[2]], [-sol[2],sol[0]]]) + \
                     self.imag * np.array([[sol[1] , sol[3]], [sol[3] , -sol[1]]])
             alpha %= q
-            for i,g in enumerate(self.PGL):
-                if (g == alpha).all():
-                    ret += [i]
+            for k in range(q):
+               if str(k*alpha%q) in self.PGL_dict:
+                   ret += [self.PGL_dict[str(k*alpha%q)]]
+                   break
         print("------")
         return ret 
 
@@ -172,17 +185,18 @@ def plotLifted(lifted, Gsize):
 
 if __name__ == "__main__" :
     
-    G = LPS(13)
+    G = LPS(17)
     h = G.mul(2,3)
     
     print(h)
     print(G.PGL[2])
     print(G.PGL[3])
     print(G.PGL[4])
-    #print("\n".join(G.PGL))
-    #genset = G.gen_set(5)
-    #for r in genset:
-    #    print(G.PGL[r])
+    print("----")
+    genset = G.gen_set(9)
+    print(len(genset))
+    for r in genset:
+        print(G.PGL[r])
     exit(0)
 
     G = Group( np.array([ 
